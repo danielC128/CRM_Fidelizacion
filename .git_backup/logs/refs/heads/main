@@ -1,7 +1,0 @@
-0000000000000000000000000000000000000000 50b2e6e9676c26e698d054c15da4b3e6319aa0f1 danielC128 <danielcastillorios811@gmail.com> 1765558966 -0500	clone: from https://github.com/Gian2560/bot_fidelizacion.git
-50b2e6e9676c26e698d054c15da4b3e6319aa0f1 fa56e893cd1bf860baacad46d330c7d3b928d131 danielC128 <danielcastillorios811@gmail.com> 1766226556 -0500	commit: Version Daniel con optimizaciones
-fa56e893cd1bf860baacad46d330c7d3b928d131 fa56e893cd1bf860baacad46d330c7d3b928d131 danielC128 <danielcastillorios811@gmail.com> 1766226637 -0500	Branch: renamed refs/heads/main to refs/heads/main
-fa56e893cd1bf860baacad46d330c7d3b928d131 c6e5625fc03ee64388fc6f297b4e28fb9a296622 danielC128 <danielcastillorios811@gmail.com> 1766227135 -0500	commit: Version inicial Daniel con optimizaciones
-c6e5625fc03ee64388fc6f297b4e28fb9a296622 c6e5625fc03ee64388fc6f297b4e28fb9a296622 danielC128 <danielcastillorios811@gmail.com> 1766227197 -0500	Branch: renamed refs/heads/main to refs/heads/main
-c6e5625fc03ee64388fc6f297b4e28fb9a296622 fa56e893cd1bf860baacad46d330c7d3b928d131 danielC128 <danielcastillorios811@gmail.com> 1766228589 -0500	reset: moving to HEAD~1
-fa56e893cd1bf860baacad46d330c7d3b928d131 022945cce95ae527453b7c282f30e7bf7096b32f danielC128 <danielcastillorios811@gmail.com> 1766228657 -0500	commit: Initial commit - CRM Fidelización

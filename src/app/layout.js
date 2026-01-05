@@ -1,5 +1,6 @@
 import "./globals.css"; // Importa los estilos globales aquí
 import ClientWrapper from "./components/ClientWrapper";
+import ThemeRegistry from "./ThemeRegistry";
 
 export const metadata = {
   title: "Maqui+",
@@ -13,7 +14,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body>
-        <ClientWrapper>{children}</ClientWrapper>
+        <ThemeRegistry>
+          <ClientWrapper>{children}</ClientWrapper>
+        </ThemeRegistry>
       </body>
     </html>
   );

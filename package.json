@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "set NEXT_DISABLE_TURBOPACK=1&& next dev",
     "build": "prisma generate && next build --webpack",
     "start": "next start",
     "lint": "next lint",
@@ -60,3 +60,4 @@
     "typescript": "^5.7.3"
   }
 }
+
