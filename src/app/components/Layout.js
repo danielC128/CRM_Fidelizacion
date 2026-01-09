@@ -62,8 +62,8 @@ export default function Layout({ children }) {
     signOut({ callbackUrl: "/login" }); // Cierra sesión y redirige al login
   };
 
-  const isAdmin = session?.user?.rol === "admin" || session?.user?.rol === "admin_general";
-  console.log("Rol", session?.user?.rol)
+  const isAdmin = session?.user?.role === "admin" || session?.user?.role === "admin_general";
+  // console.log("Rol", session?.user?.role) // Comentado para evitar logs en build
 
   const drawer = (
     <Box
