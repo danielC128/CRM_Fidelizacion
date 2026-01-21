@@ -148,7 +148,7 @@ export async function POST(req) {
       base.Cluster,
       base.gestion,
       fondos.Cta_Act_Pag,
-      COALESCE(CAST(fondos.Telf_wsp AS STRING), CAST(fondos.Telf_SMS AS STRING)) AS Telf_wsp,
+      CAST(fondos.Telf_SMS AS STRING) AS Telf_wsp,
       fondos.E_mail,
       fondos.Linea
     FROM   \`${project}.${dataset}.${table}\` AS base
@@ -200,14 +200,14 @@ export async function POST(req) {
             base.Cluster,
             fondos.Fec_Venc_Cuota AS feccuota,
             fondos.E_mail AS email,
-            COALESCE(CAST(fondos.Telf_wsp AS STRING), CAST(fondos.Telf_SMS AS STRING)) AS telefono,
+            CAST(fondos.Telf_SMS AS STRING) AS telefono,
             fondos.Primer_Nombre AS nombre,
             fondos.Cta_Act_Pag,
             fondos.Cod_Bco AS codpago,
             fondos.Linea,
             fondos.Modelo AS modelo,
             (fondos.C_Adm + fondos.C_Cap) AS monto,
-            ROW_NUMBER() OVER (PARTITION BY COALESCE(CAST(fondos.Telf_wsp AS STRING), CAST(fondos.Telf_SMS AS STRING)) ORDER BY base.Codigo_Asociado) AS row_num
+            ROW_NUMBER() OVER (PARTITION BY CAST(fondos.Telf_SMS AS STRING) ORDER BY base.Codigo_Asociado) AS row_num
           FROM \`${project}.${dataset}.${table}\` AS base
           LEFT JOIN peak-emitter-350713.FR_general.bd_fondos AS fondos 
             ON base.Codigo_Asociado = fondos.Codigo_Asociado

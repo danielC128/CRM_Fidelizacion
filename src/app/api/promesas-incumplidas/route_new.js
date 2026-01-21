@@ -95,10 +95,10 @@ export async function GET(request) {
         
         const bigQueryQuery = `
           SELECT
-            COALESCE(CAST(Telf_wsp AS STRING), Telf_SMS) as telefono,
+            Telf_SMS as telefono,
             \`Fec Ult Pag CCAP\` as fecha_ultimo_pago
           FROM \`peak-emitter-350713.FR_general.bd_fondos\`
-          WHERE COALESCE(CAST(Telf_wsp AS STRING), Telf_SMS) IN (${celulares})
+          WHERE Telf_SMS IN (${celulares})
             AND \`Fec Ult Pag CCAP\` IS NOT NULL
           LIMIT 1000
         `;
