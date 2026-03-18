@@ -2,11 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { parse } from "csv-parse/sync";
 import * as XLSX from "xlsx";
-import { MongoClient } from "mongodb";
 require("dotenv").config();
-
-const uri = process.env.DATABASE_URL_MONGODB;
-const clientPromise = new MongoClient(uri).connect();
 
 export async function POST(req, context) {
     try {
@@ -58,8 +54,6 @@ export async function POST(req, context) {
       console.log("📌 Clientes cargados desde archivo:", clientes);
 
       const clientesProcesados = [];
-      const mongoClient = await clientPromise;
-      const db = mongoClient.db(process.env.MONGODB_DB);
 
       // ✅ OPTIMIZACIÓN 1: Normalizar todos los números de una vez
       const clientesNormalizados = clientes
@@ -87,24 +81,16 @@ export async function POST(req, context) {
       console.log(`📊 Total de clientes a procesar: ${celulares.length}`);
 
       // ✅ OPTIMIZACIÓN 2: Traer todos los clientes existentes en UN SOLO query
-      console.log("🔍 Consultando clientes existentes en MySQL...");
-      const existingClientesMySQL = await prisma.cliente.findMany({
+      console.log("🔍 Consultando clientes existentes en PostgreSQL...");
+      const existingClientes = await prisma.cliente.findMany({
         where: { celular: { in: celulares } }
       });
-      const mysqlClientesMap = new Map(existingClientesMySQL.map(c => [c.celular, c]));
-      console.log(`✅ Encontrados ${existingClientesMySQL.length} clientes existentes en MySQL`);
+      const clientesMap = new Map(existingClientes.map(c => [c.celular, c]));
+      console.log(`✅ Encontrados ${existingClientes.length} clientes existentes en PostgreSQL`);
 
-      // ✅ OPTIMIZACIÓN 3: Traer todos los clientes de MongoDB en UN SOLO query
-      console.log("🔍 Consultando clientes existentes en MongoDB...");
-      const existingClientesMongo = await db.collection("clientes").find({
-        celular: { $in: celulares }
-      }).toArray();
-      const mongoClientesMap = new Map(existingClientesMongo.map(c => [c.celular, c]));
-      console.log(`✅ Encontrados ${existingClientesMongo.length} clientes existentes en MongoDB`);
-
-      // ✅ OPTIMIZACIÓN 4: Crear nuevos clientes en MySQL con createMany (batch)
-      const nuevosClientesMySQL = clientesNormalizados
-        .filter(c => !mysqlClientesMap.has(c.celularNormalizado))
+      // ✅ OPTIMIZACIÓN 3: Crear nuevos clientes en PostgreSQL con createMany (batch)
+      const nuevosClientes = clientesNormalizados
+        .filter(c => !clientesMap.has(c.celularNormalizado))
         .map(c => ({
           celular: c.celularNormalizado,
           nombre: c.Nombre,
@@ -114,59 +100,30 @@ export async function POST(req, context) {
           gestor: c.Asesor || null
         }));
 
-      let clientesCreadosMySQL = [];
-      if (nuevosClientesMySQL.length > 0) {
-        console.log(`🔹 Creando ${nuevosClientesMySQL.length} nuevos clientes en MySQL...`);
+      let clientesCreados = [];
+      if (nuevosClientes.length > 0) {
+        console.log(`🔹 Creando ${nuevosClientes.length} nuevos clientes en PostgreSQL...`);
         try {
           await prisma.cliente.createMany({
-            data: nuevosClientesMySQL,
+            data: nuevosClientes,
             skipDuplicates: true
           });
 
           // Volver a consultar para obtener los IDs
-          clientesCreadosMySQL = await prisma.cliente.findMany({
-            where: { celular: { in: nuevosClientesMySQL.map(c => c.celular) } }
+          clientesCreados = await prisma.cliente.findMany({
+            where: { celular: { in: nuevosClientes.map(c => c.celular) } }
           });
 
           // Actualizar el mapa
-          clientesCreadosMySQL.forEach(c => mysqlClientesMap.set(c.celular, c));
-          console.log(`✅ ${clientesCreadosMySQL.length} clientes creados en MySQL`);
+          clientesCreados.forEach(c => clientesMap.set(c.celular, c));
+          console.log(`✅ ${clientesCreados.length} clientes creados en PostgreSQL`);
         } catch (err) {
-          console.error("❌ Error al crear clientes en MySQL:", err);
+          console.error("❌ Error al crear clientes en PostgreSQL:", err);
         }
       }
 
-      // ✅ OPTIMIZACIÓN 5: Crear nuevos clientes en MongoDB con insertMany (batch)
-      const nuevosClientesMongo = clientesNormalizados
-        .filter(c => !mongoClientesMap.has(c.celularNormalizado))
-        .map(c => {
-          const clienteMySQL = mysqlClientesMap.get(c.celularNormalizado);
-          return {
-            id_cliente: `cli_${clienteMySQL?.cliente_id}`,
-            nombre: c.Nombre,
-            celular: c.celularNormalizado,
-            correo: "",
-            conversaciones: []
-          };
-        });
-
-      if (nuevosClientesMongo.length > 0) {
-        console.log(`🔹 Creando ${nuevosClientesMongo.length} nuevos clientes en MongoDB...`);
-        try {
-          await db.collection("clientes").insertMany(nuevosClientesMongo, { ordered: false });
-          console.log(`✅ ${nuevosClientesMongo.length} clientes creados en MongoDB`);
-        } catch (err) {
-          // insertMany con ordered:false continúa incluso si hay duplicados
-          if (err.code === 11000) {
-            console.log(`⚠️ Algunos clientes ya existían en MongoDB (esperado)`);
-          } else {
-            console.error("❌ Error al crear clientes en MongoDB:", err);
-          }
-        }
-      }
-
-      // ✅ OPTIMIZACIÓN 6: Consultar relaciones cliente_campanha existentes en UN SOLO query
-      const clienteIds = Array.from(mysqlClientesMap.values()).map(c => c.cliente_id);
+      // ✅ OPTIMIZACIÓN 4: Consultar relaciones cliente_campanha existentes en UN SOLO query
+      const clienteIds = Array.from(clientesMap.values()).map(c => c.cliente_id);
       console.log("🔍 Consultando relaciones cliente-campaña existentes...");
       const existingRelaciones = await prisma.cliente_campanha.findMany({
         where: {
@@ -200,13 +157,13 @@ export async function POST(req, context) {
 
       // Construir resultado final
       clientesNormalizados.forEach(c => {
-        const clienteMySQL = mysqlClientesMap.get(c.celularNormalizado);
-        if (clienteMySQL) {
+        const cliente = clientesMap.get(c.celularNormalizado);
+        if (cliente) {
           clientesProcesados.push({
-            cliente_id: clienteMySQL.cliente_id,
-            nombre: clienteMySQL.nombre,
-            celular: clienteMySQL.celular,
-            gestor: clienteMySQL.gestor
+            cliente_id: cliente.cliente_id,
+            nombre: cliente.nombre,
+            celular: cliente.celular,
+            gestor: cliente.gestor
           });
         }
       });
