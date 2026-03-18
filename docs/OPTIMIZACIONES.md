@@ -1,10 +1,12 @@
-# 🚀 Optimizaciones Implementadas
+> **Nota:** Este documento fue creado el 2025-12-12, antes del documento `cambios-creacion-campanas.md` (Marzo 2026).
+
+# Optimizaciones Implementadas
 
 Este documento detalla todas las optimizaciones de rendimiento implementadas en el sistema de campañas.
 
 ---
 
-## 📊 Resumen de Mejoras
+## Resumen de Mejoras
 
 | Operación | Antes | Después | Mejora |
 |-----------|-------|---------|--------|
@@ -16,9 +18,9 @@ Este documento detalla todas las optimizaciones de rendimiento implementadas en 
 
 ---
 
-## 🎯 Optimizaciones Implementadas
+## Optimizaciones Implementadas
 
-### 1. ✅ Carga de Clientes Optimizada
+### 1. Carga de Clientes Optimizada
 
 **Archivo:** `src/app/api/campaings/[id]/cargar-clientes/route.js`
 
@@ -29,13 +31,13 @@ Este documento detalla todas las optimizaciones de rendimiento implementadas en 
 
 **Solución implementada:**
 ```javascript
-// ❌ ANTES: Query por cada cliente
+// ANTES: Query por cada cliente
 clientes.map(async cliente => {
   await prisma.cliente.findFirst({ where: { celular: cliente.celular } });
   await prisma.cliente.create({ data: cliente });
 });
 
-// ✅ DESPUÉS: Batch queries
+// DESPUÉS: Batch queries
 const existingClientes = await prisma.cliente.findMany({
   where: { celular: { in: celulares } }  // Una sola query
 });
@@ -47,14 +49,14 @@ await prisma.cliente.createMany({
 ```
 
 **Beneficios:**
-- ✅ De 2000+ queries a solo 5-7 queries totales
-- ✅ **10x más rápido** (60s → 6s para 1000 clientes)
-- ✅ Menos carga en la base de datos
-- ✅ Menos memoria consumida
+- De 2000+ queries a solo 5-7 queries totales
+- **10x más rápido** (60s → 6s para 1000 clientes)
+- Menos carga en la base de datos
+- Menos memoria consumida
 
 ---
 
-### 2. ✅ Batch Updates en Envío de Campaña
+### 2. Batch Updates en Envío de Campaña
 
 **Archivo:** `src/app/api/campaings/[id]/send/route.js`
 
@@ -95,13 +97,13 @@ class WhatsAppCampaignManager {
 ```
 
 **Beneficios:**
-- ✅ De 1000 updates individuales a 10 batches de 100
-- ✅ **5x más rápido** (30s → 6s para actualizaciones)
-- ✅ Transacciones más eficientes
+- De 1000 updates individuales a 10 batches de 100
+- **5x más rápido** (30s → 6s para actualizaciones)
+- Transacciones más eficientes
 
 ---
 
-### 3. ✅ Batch Writes a Firebase
+### 3. Batch Writes a Firebase
 
 **Archivo:** `src/app/api/campaings/[id]/send/route.js`
 
@@ -138,13 +140,13 @@ class WhatsAppCampaignManager {
 ```
 
 **Beneficios:**
-- ✅ De 1000 writes individuales a 2 batches de 500
-- ✅ **3x más rápido** para escrituras Firebase
-- ✅ Menos costos en Firestore
+- De 1000 writes individuales a 2 batches de 500
+- **3x más rápido** para escrituras Firebase
+- Menos costos en Firestore
 
 ---
 
-### 4. ✅ Índices de Base de Datos
+### 4. Índices de Base de Datos
 
 **Archivo:** `prisma/add-indexes.sql`
 
@@ -169,13 +171,13 @@ yarn prisma db execute --file prisma/add-indexes.sql
 ```
 
 **Beneficios:**
-- ✅ Consultas 5-10x más rápidas
-- ✅ Mejor rendimiento en todas las operaciones
-- ✅ Escalabilidad mejorada
+- Consultas 5-10x más rápidas
+- Mejor rendimiento en todas las operaciones
+- Escalabilidad mejorada
 
 ---
 
-### 5. ✅ Caché en Memoria para BigQuery
+### 5. Caché en Memoria para BigQuery
 
 **Archivos:**
 - `src/lib/bigqueryCache.js` - Módulo de caché
@@ -219,14 +221,14 @@ POST /api/bigquery/cache/clean
 ```
 
 **Beneficios:**
-- ✅ Consultas cacheadas **40x más rápidas** (2s → 50ms)
-- ✅ Reduce costos de BigQuery
-- ✅ Mejor experiencia de usuario
-- ✅ Gestión automática de memoria (TTL + límite de tamaño)
+- Consultas cacheadas **40x más rápidas** (2s → 50ms)
+- Reduce costos de BigQuery
+- Mejor experiencia de usuario
+- Gestión automática de memoria (TTL + límite de tamaño)
 
 ---
 
-## 📈 Monitoreo y Métricas
+## Monitoreo y Métricas
 
 ### Verificar índices creados:
 ```sql
@@ -268,7 +270,7 @@ Respuesta:
 
 ---
 
-## 🎯 Impacto en Producción
+## Impacto en Producción
 
 ### Carga de 1000 clientes:
 - **Antes:** ~60 segundos, 2000+ queries
@@ -287,7 +289,7 @@ Respuesta:
 
 ---
 
-## 🔧 Mantenimiento
+## Mantenimiento
 
 ### Limpiar caché manualmente:
 ```bash
@@ -312,19 +314,19 @@ psql "$DATABASE_URL_MYSQL" -f prisma/add-indexes.sql
 
 ---
 
-## 📚 Archivos Modificados
+## Archivos Modificados
 
-1. ✅ `src/app/api/campaings/[id]/cargar-clientes/route.js` - Batch queries
-2. ✅ `src/app/api/campaings/[id]/send/route.js` - Batch updates/Firebase
-3. ✅ `src/app/api/bigquery/filtrar/route.js` - Caché BigQuery
-4. ✅ `src/lib/bigqueryCache.js` - Módulo de caché (nuevo)
-5. ✅ `src/app/api/bigquery/cache/route.js` - API de gestión (nuevo)
-6. ✅ `prisma/add-indexes.sql` - Script de índices (nuevo)
-7. ✅ `prisma/README_INDEXES.md` - Documentación de índices (nuevo)
+1. `src/app/api/campaings/[id]/cargar-clientes/route.js` - Batch queries
+2. `src/app/api/campaings/[id]/send/route.js` - Batch updates/Firebase
+3. `src/app/api/bigquery/filtrar/route.js` - Caché BigQuery
+4. `src/lib/bigqueryCache.js` - Módulo de caché (nuevo)
+5. `src/app/api/bigquery/cache/route.js` - API de gestión (nuevo)
+6. `prisma/add-indexes.sql` - Script de índices (nuevo)
+7. `prisma/README_INDEXES.md` - Documentación de índices (nuevo)
 
 ---
 
-## ✨ Próximos Pasos Recomendados
+## Próximos Pasos Recomendados
 
 1. **Ejecutar script de índices** en producción
 2. **Monitorear hit rate** del caché BigQuery

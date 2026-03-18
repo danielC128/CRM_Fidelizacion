@@ -36,7 +36,6 @@ export default function CampaignPage() {
   const [strategy, setStrategy] = useState("");
   const [fecha, setFecha] = useState("");
   const [linea, setLinea] = useState("");
-  const [tipoCampaña, setTipoCampaña] = useState("Fidelizacion");
   const [variable2, setVariable2] = useState("");
   const [sendDate, setSendDate] = useState(null);
   const [sendTime, setSendTime] = useState(null);
@@ -268,37 +267,16 @@ export default function CampaignPage() {
     }
 
     const payload = {
-      tipoCampana: tipoCampaña, // "Recordatorio" o "Fidelizacion"
       table: selectedDatabase, // nombre de la tabla o vista en BigQuery
       filters,                  // array con los filtros
-      modoEnvio               // NEW: M0 / M1
+      modoEnvio               // M0 / M1
     };
 
     try {
       console.log('Enviando payload de filtros:', payload);
       const { data } = await axiosInstance.post('/bigquery/filtrar', payload);
       console.log('Datos filtrados →', data);
-      let clientsProcesados = data.rows;
-      if (tipoCampaña === "Fidelizacion") {
-        const opcionesFecha = { weekday: 'long', day: 'numeric', month: 'long' };
-        clientsProcesados = data.rows.map(row => {
-          let fechaLegible = '';
-          // Verifica si feccuota existe y tiene la propiedad value
-          if (row.feccuota && row.feccuota.value) {
-            const fechaObj = new Date(row.feccuota.value);
-            if (!isNaN(fechaObj.getTime())) {
-              fechaLegible = fechaObj.toLocaleDateString('es-ES', opcionesFecha);
-            }
-          }
-          return {
-            ...row,
-            feccuota: fechaLegible
-          };
-        });
-      }
-      setClients(clientsProcesados);
-      console.log('Datos filtrados:', data);
-      // TODO: guarda "data" en estado o muéstralo en pantalla
+      setClients(data.rows);
     } catch (error) {
       console.error('Error al aplicar filtros:', error);
       alert('Ocurrió un problema al aplicar los filtros');
@@ -392,29 +370,6 @@ export default function CampaignPage() {
                 />
               </FormControl>
             </Grid>
-            {/* NEW: Selector M0/M1 */}
-            <Grid item xs={12}>
-              <Typography sx={{ mb: 1, color: colors.darkBlue, fontWeight: 600 }}>
-                Modo de envíos
-              </Typography>
-              <ButtonGroup variant="outlined">
-                <Button
-                  onClick={() => setModoEnvio("M0")}
-                  variant={modoEnvio === "M0" ? "contained" : "outlined"}
-                >
-                  M0
-                </Button>
-                <Button
-                  onClick={() => setModoEnvio("M1")}
-                  variant={modoEnvio === "M1" ? "contained" : "outlined"}
-                >
-                  M1
-                </Button>
-              </ButtonGroup>
-            </Grid>      
-
-
-
           </Grid>
 
           <Divider sx={{ mb: 5 }} />
@@ -529,15 +484,15 @@ export default function CampaignPage() {
 
             <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth>
-                <InputLabel sx={{ color: colors.darkBlue, fontWeight: 600 }}>Tipo Campaña</InputLabel>
+                <InputLabel sx={{ color: colors.darkBlue, fontWeight: 600 }}>Modo de envíos</InputLabel>
                 <Select
-                  value={tipoCampaña} // Por defecto "Fidelización"
-                  onChange={(e) => setTipoCampaña(e.target.value)}
-                  label="Tipo Campaña"
+                  value={modoEnvio}
+                  onChange={(e) => setModoEnvio(e.target.value)}
+                  label="Modo de envíos"
                   sx={{ bgcolor: colors.white, borderRadius: 2, "& .MuiSelect-select": { fontWeight: 600 } }}
                 >
-                  <MenuItem value="Recordatorio">Recordatorio</MenuItem>
-                  <MenuItem value="Fidelizacion">Fidelización</MenuItem>
+                  <MenuItem value="M0">M0</MenuItem>
+                  <MenuItem value="M1">M1</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

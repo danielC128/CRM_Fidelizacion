@@ -44,12 +44,12 @@ async function getSchema(project, dataset, table) {
 /* ── 3. POST /api/filtrar ────────────────────────────────── */
 export async function POST(req) {
   try {
-    const { table, filters, tipoCampana, modoEnvio } = await req.json();
+    const { table, filters, modoEnvio } = await req.json();
     if (!table || !Array.isArray(filters))
       return new Response('Payload inválido', { status: 400 });
 
     // ✅ Generar clave de caché
-    const cacheKey = cache.generateKey(table, filters, tipoCampana, modoEnvio);
+    const cacheKey = cache.generateKey(table, filters, modoEnvio);
 
     // ✅ Intentar obtener del caché primero
     const cachedResult = cache.get(cacheKey);
@@ -80,30 +80,6 @@ export async function POST(req) {
         return; // No agregamos más lógica para este filtro
       }
 
-      if (
-    (colName === 'feccuota' || colName === 'Fec_Venc_Cuota') &&
-    tipoCampana === "Fidelizacion"
-  ) {
-    // Ejemplo de val: "viernes, 19 de septiembre"
-    // Extrae día y mes en español
-    const partes = val.split(',')[1].trim().split(' de ');
-    const dia = Number(partes[0]); // "19"
-    const mesTexto = partes[1].toLowerCase(); // "septiembre"
-
-    // Mapeo de meses en español a número
-    const meses = {
-      enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,
-      julio: 7, agosto: 8, septiembre: 9, octubre: 10, noviembre: 11, diciembre: 12
-    };
-    const mes = meses[mesTexto];
-
-    params[`${p}_month`] = mes;
-    params[`${p}_day`] = dia;
-    whereParts.push(`EXTRACT(MONTH FROM DATE(\`${colName}\`)) = @${p}_month`);
-    whereParts.push(`EXTRACT(DAY FROM DATE(\`${colName}\`)) = @${p}_day`);
-    return;
-  }
-
       // Si es fecha, castea y filtra solo por la parte de la fecha
       if (colName === 'DATETIME' || colType === 'DATE') {
 
@@ -125,110 +101,86 @@ export async function POST(req) {
 
     const whereSQL = whereParts.join(' AND ') || '1=1';
     console.log('WHERE SQL:', whereSQL);
-    /* 3.2 columnas extra con alias legibles */
-    const ALIAS = { segmentacion: 'segmento', cluster: 'cluster', estrategia: 'estrategia' };
-    const selectExtra = filters
-      .map(f => `\`${f.column}\` AS ${ALIAS[f.type] || f.column}`)
-      .join(', ');
-    let QUERY = "";
-    console.log('La timpo de camnañasdma ese askjriaspjrfuosadfhoasdfñ:', tipoCampana);
-    /* 3.3 consulta final con JOIN */
-    if (tipoCampana === "Recordatorio") {
-      // NEW: elegir envios_cobranzas_m0 o _m1
-      const modo = (modoEnvio || "M1").toString().toUpperCase(); // fallback M1
-      const enviosTable =
-        modo === "M0"
-          ? "peak-emitter-350713.FR_general.envios_cobranzas_m0"
-          : "peak-emitter-350713.FR_general.envios_cobranzas_m1";
-      QUERY = `
-   WITH cte_M1 AS (
-    SELECT 
-      base.Codigo_Asociado,
-      base.segmentacion,
-      base.Cluster,
-      base.gestion,
-      fondos.Cta_Act_Pag,
-      CAST(fondos.Telf_SMS AS STRING) AS Telf_wsp,
-      fondos.E_mail,
-      fondos.Linea
-    FROM   \`${project}.${dataset}.${table}\` AS base
-    LEFT JOIN peak-emitter-350713.FR_general.bd_fondos AS fondos
-      ON base.Codigo_Asociado = fondos.Codigo_Asociado
-  ),
-  ranked AS (
-    SELECT 
-      M1.Codigo_Asociado,
-      M1.segmentacion,
-      M1.Linea,
-      envios.Email AS email,
-      M1.Cta_Act_Pag,
-      envios.TelfSMS AS telefono,
-      envios.Primer_Nombre AS nombre,
-      envios.Cod_Banco AS codpago,
-      envios.Fec_Venc_Cuota AS feccuota,
-      envios.Modelo AS modelo,
-      FORMAT('%.2f', envios.Monto) AS monto,
-      ROW_NUMBER() OVER (PARTITION BY envios.TelfSMS ORDER BY envios.N_Doc) AS row_num  -- Asigna un número a cada fila por TelfSMS
-    FROM cte_M1 AS M1
-    INNER JOIN ${enviosTable} AS envios
-      ON M1.Telf_wsp = CAST(envios.TelfSMS AS STRING)
-    WHERE   
-      ${whereSQL}
-  )
-  SELECT 
-    Cta_Act_Pag,
-    Codigo_Asociado,
-    segmentacion,
-    email,
-    telefono,
-    nombre,
-    codpago,
-    feccuota,
-    modelo,
-    monto,
-    Linea
-  FROM ranked
-  WHERE row_num = 1;  -- Selecciona solo la primera fila de cada grupo de TelfSMS
-`;
-    } else {
-      QUERY = `
-        WITH ranked AS (
-          SELECT 
-            base.Codigo_Asociado,
-            base.segmentacion,
-            base.gestion,
-            base.Cluster,
-            fondos.Fec_Venc_Cuota AS feccuota,
-            fondos.E_mail AS email,
-            CAST(fondos.Telf_SMS AS STRING) AS telefono,
-            fondos.Primer_Nombre AS nombre,
-            fondos.Cta_Act_Pag,
-            fondos.Cod_Bco AS codpago,
-            fondos.Linea,
-            fondos.Modelo AS modelo,
-            (fondos.C_Adm + fondos.C_Cap) AS monto,
-            ROW_NUMBER() OVER (PARTITION BY CAST(fondos.Telf_SMS AS STRING) ORDER BY base.Codigo_Asociado) AS row_num
-          FROM \`${project}.${dataset}.${table}\` AS base
-          LEFT JOIN peak-emitter-350713.FR_general.bd_fondos AS fondos 
-            ON base.Codigo_Asociado = fondos.Codigo_Asociado
-          WHERE ${whereSQL}
-        )
-        SELECT 
-         Cta_Act_Pag,
-    Codigo_Asociado,
-    segmentacion,
-    email,
-    telefono,
-    nombre,
-    codpago,
-    feccuota,
-    modelo,
-    monto,
-    Linea
-        FROM ranked
-        WHERE row_num = 1;
-      `;
-    }
+
+    /* 3.2 Elegir tabla de envios según modo M0/M1 */
+    const modo = (modoEnvio || "M0").toString().toUpperCase(); // fallback M0
+    const enviosTable =
+      modo === "M0"
+        ? "peak-emitter-350713.FR_general.envios_cobranzas_m0"
+        : "peak-emitter-350713.FR_general.envios_cobranzas_m1";
+
+    /* 3.3 Consulta con JOIN a bd_fondos y envios_cobranzas (cruce por N_Doc) */
+    const QUERY = `
+      WITH datos_bd_fondos AS (
+        SELECT Codigo_Asociado, N_Doc, Cta_Act_Pag, Linea
+        FROM \`peak-emitter-350713.FR_general.bd_fondos\`
+      ),
+      datos_segmentacion AS (
+        SELECT
+          base.Codigo_Asociado,
+          fondos.N_Doc,
+          base.segmentacion,
+          base.Cluster,
+          base.gestion,
+          fondos.Cta_Act_Pag,
+          fondos.Linea
+        FROM \`${project}.${dataset}.${table}\` AS base
+        JOIN datos_bd_fondos AS fondos
+          ON base.Codigo_Asociado = fondos.Codigo_Asociado
+        WHERE ${whereSQL}
+      ),
+      datos_envios AS (
+        SELECT
+          N_Doc,
+          TelfSMS AS telefono,
+          Primer_Nombre AS nombre,
+          Cod_Banco AS codpago,
+          FORMAT('%.2f', Monto) AS monto,
+          Fec_Venc_Cuota AS feccuota,
+          Email AS email,
+          Modelo AS modelo
+        FROM \`${enviosTable}\`
+      ),
+      datos_final AS (
+        SELECT
+          seg.Codigo_Asociado,
+          seg.segmentacion,
+          seg.Linea,
+          seg.Cta_Act_Pag,
+          env.telefono,
+          env.nombre,
+          env.codpago,
+          env.monto,
+          env.feccuota,
+          env.email,
+          env.modelo,
+          ROW_NUMBER() OVER (PARTITION BY env.N_Doc ORDER BY env.feccuota DESC) AS row_num_ndoc
+        FROM datos_envios AS env
+        JOIN datos_segmentacion AS seg
+          ON env.N_Doc = seg.N_Doc
+      ),
+      dedup_telefono AS (
+        SELECT
+          *,
+          ROW_NUMBER() OVER (PARTITION BY telefono ORDER BY feccuota DESC) AS row_num_telefono
+        FROM datos_final
+        WHERE row_num_ndoc = 1
+      )
+      SELECT
+        Cta_Act_Pag,
+        Codigo_Asociado,
+        segmentacion,
+        email,
+        telefono,
+        nombre,
+        codpago,
+        feccuota,
+        modelo,
+        monto,
+        Linea
+      FROM dedup_telefono
+      WHERE row_num_telefono = 1
+    `;
 
     console.log('Consulta SQL:', QUERY);
 
