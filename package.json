@@ -31,7 +31,6 @@
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
     "chart.js": "^4.5.0",
-    "csv-parse": "^5.6.0",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "dotenv": "^16.4.7",
@@ -45,8 +44,7 @@
     "react": "^19.2.3",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.2.3",
-    "recharts": "^3.1.2",
-    "xlsx": "^0.18.5"
+    "recharts": "^3.1.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

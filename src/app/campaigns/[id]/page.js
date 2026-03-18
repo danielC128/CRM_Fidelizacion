@@ -9,9 +9,8 @@ import {
   Card, CardContent, Divider, IconButton, Chip, Grid, Paper, Avatar, Fade, LinearProgress
 } from "@mui/material";
 import CustomDataGrid from "@/app/components/CustomDataGrid";
-import * as XLSX from "xlsx";
-import { 
-  ArrowBack, UploadFile, Send, Delete, Campaign, Schedule, 
+import {
+  ArrowBack, Send, Delete, Campaign, Schedule,
   Group, Message, CheckCircle, Error, Info, Warning,
   Phone, Person, Business, DateRange, Assessment
 } from "@mui/icons-material";
@@ -23,12 +22,6 @@ const CampaignDetailPage = () => {
   const params = useParams();
   const router = useRouter();
   const campaignId = params?.id;
-
-  const [openModal, setOpenModal] = useState(false);
-  const [file, setFile] = useState(null);
-  const [clients, setClients] = useState([]);
-  const [loadingUpload, setLoadingUpload] = useState(false);
-  const fileInputRef = useRef(null);
 
   const [openSelectModal, setOpenSelectModal] = useState(false);
   const [gestores, setGestores] = useState([]);
@@ -45,7 +38,6 @@ const CampaignDetailPage = () => {
     error,
     fetchCampaignDetail,
     handleRemoveClient,
-    handleUploadClients,
     handleSendCampaign,
     snackbar,
     campaignStats,
@@ -66,41 +58,6 @@ const CampaignDetailPage = () => {
     console.log("camapla", campaign);
   }, [campaignId]);
 
-  const handleFileUpload = (event) => {
-    const uploadedFile = event.target.files[0];
-    if (!uploadedFile) return;
-    setFile(uploadedFile);
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: "array" });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(sheet);
-
-      const formattedClients = jsonData.map((row, index) => ({
-        id: index + 1,
-        numero: row["Numero"],
-        nombre: row["Nombre"],
-        gestor: row["Asesor"]
-      }));
-
-      setClients(formattedClients);
-    };
-    reader.readAsArrayBuffer(uploadedFile);
-  };
-
-  const handleSaveClients = async () => {
-    if (!file) return;
-    setLoadingUpload(true);
-    await handleUploadClients(file);
-    setOpenModal(false);
-    setFile(null);
-    setClients([]);
-    fetchCampaignDetail();
-    setLoadingUpload(false);
-  };
   const handleChangeGestor = async (value) => {
     setSelectedGestor(value);
     const clientes = await getClientesPorGestor(value);
@@ -609,82 +566,7 @@ const CampaignDetailPage = () => {
                 </Paper>
               </Fade>
 
-              {/* MODALES Y DIÁLOGOS CON MEJOR DISEÑO */}
-              <Dialog 
-                open={openModal} 
-                onClose={() => setOpenModal(false)} 
-                maxWidth="md" 
-                fullWidth
-                PaperProps={{
-                  sx: {
-                    borderRadius: 3,
-                    background: 'linear-gradient(135deg, #ffffff 0%, #fafbfc 100%)'
-                  }
-                }}
-              >
-                <DialogTitle sx={{ 
-                  bgcolor: '#007391', 
-                  color: 'white', 
-                  textAlign: 'center',
-                  fontWeight: 'bold',
-                  fontSize: '1.3rem'
-                }}>
-                  <UploadFile sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Subir Clientes desde Excel
-                </DialogTitle>
-                <DialogContent sx={{ p: 4 }}>
-                  <Box 
-                    sx={{ 
-                      border: '2px dashed #007391',
-                      borderRadius: 2,
-                      p: 4,
-                      textAlign: 'center',
-                      bgcolor: 'rgba(0, 115, 145, 0.02)'
-                    }}
-                  >
-                    <input 
-                      ref={fileInputRef} 
-                      type="file" 
-                      accept=".xlsx, .xls" 
-                      onChange={handleFileUpload}
-                      style={{
-                        padding: '10px',
-                        borderRadius: '8px',
-                        border: '1px solid #007391',
-                        backgroundColor: 'white'
-                      }}
-                    />
-                  </Box>
-                </DialogContent>
-                <DialogActions sx={{ p: 3, gap: 2 }}>
-                  <Button 
-                    onClick={() => setOpenModal(false)} 
-                    variant="outlined"
-                    sx={{ 
-                      borderColor: '#007391',
-                      color: '#007391',
-                      '&:hover': { borderColor: '#005c6b', bgcolor: 'rgba(0, 115, 145, 0.05)' }
-                    }}
-                  >
-                    Cerrar
-                  </Button>
-                  {file && (
-                    <Button 
-                      color="primary" 
-                      variant="contained" 
-                      onClick={handleSaveClients}
-                      sx={{ 
-                        background: 'linear-gradient(135deg, #007391 0%, #005c6b 100%)',
-                        '&:hover': { background: 'linear-gradient(135deg, #005c6b 0%, #254e59 100%)' }
-                      }}
-                    >
-                      Subir Clientes
-                    </Button>
-                  )}
-                </DialogActions>
-              </Dialog>
-
-              <Dialog 
+              <Dialog
                 open={openSelectModal} 
                 onClose={() => setOpenSelectModal(false)} 
                 maxWidth="md" 
