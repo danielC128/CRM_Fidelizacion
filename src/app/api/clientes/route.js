@@ -188,47 +188,43 @@ export async function GET(req) {
       const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
       //today.setHours(0,0,0,0);
 
-      // Actualizar cada cliente en Prisma según resultado (y preparar valor para respuesta)
+      // Calcular valor de pago para cada cliente y preparar updates en batch
+      const updateOps = [];
       for (const cliente of clientes) {
         const codigo = cliente.codigo_asociado;
         const fecStr = pagosMap[codigo] || null;
         let pagoValor = "No pagó";
 
         if (fecStr) {
-          // fecStr esperado: 'YYYY-MM-DD'
           const [y, m, d] = fecStr.split('-').map(n => parseInt(n, 10));
           if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
             const fecUTCms = Date.UTC(y, m - 1, d);
             const todayUTCms = todayUTC.getTime();
             const sameMonth = y === todayUTC.getUTCFullYear() && (m - 1) === todayUTC.getUTCMonth();
-            // Regla: pago "Sí pagó" si la fecha de pago es del mismo mes/año que hoy y anterior a hoy
             if (sameMonth && fecUTCms < todayUTCms) {
               pagoValor = "Sí pagó";
-            } else {
-              pagoValor = "No pagó";
             }
-          } else {
-            pagoValor = "No pagó";
           }
-        } else {
-          pagoValor = "No pagó";
         }
 
-        // Solo actualizar si es diferente (evita writes innecesarios)
+        // Solo actualizar si es diferente
         if (cliente.Pago !== pagoValor) {
-          try {
-            await prisma.cliente.update({
+          updateOps.push(
+            prisma.cliente.update({
               where: { cliente_id: cliente.cliente_id },
               data: { Pago: pagoValor },
-            });
-            // también actualizar el objeto en memoria para la respuesta
-            cliente.Pago = pagoValor;
-          } catch (upErr) {
-            console.warn(`No se pudo actualizar Pago para cliente ${cliente.cliente_id}:`, upErr.message);
-          }
-        } else {
-          // asegurar el campo en el objeto
-          cliente.Pago = cliente.Pago ?? pagoValor;
+            })
+          );
+        }
+        cliente.Pago = pagoValor;
+      }
+
+      // Ejecutar todos los updates en una sola transacción
+      if (updateOps.length > 0) {
+        try {
+          await prisma.$transaction(updateOps);
+        } catch (txErr) {
+          console.warn(`Error en batch update de Pago (${updateOps.length} ops):`, txErr.message);
         }
       }
     } catch (bqErr) {
