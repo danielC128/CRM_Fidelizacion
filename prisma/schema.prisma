@@ -86,6 +86,7 @@ model cliente {
   Cta_Act_Pag                  Int?
   codigo_asociado              String?            @db.VarChar(100)
   Pago                         String?
+  nickname                     String?            @db.VarChar(150)
   accion_comercial             accion_comercial[]
   cita                         cita[]
   cliente_campanha             cliente_campanha[]
@@ -95,6 +96,9 @@ model cliente {
   historico_score              historico_score[]
   leadh                        leadh[]
   pago                         pago[]
+
+  @@index([gestor])
+  @@index([estado])
 }
 
 model cliente_campanha {
@@ -110,6 +114,8 @@ model cliente_campanha {
   error_descripcion   String?
   cliente             cliente   @relation(fields: [cliente_id], references: [cliente_id], onDelete: Cascade, onUpdate: NoAction, map: "cliente_campanha_ibfk_1")
   campanha            campanha  @relation(fields: [campanha_id], references: [campanha_id], onDelete: Cascade, onUpdate: NoAction, map: "cliente_campanha_ibfk_2")
+
+  @@index([campanha_id, estado_mensaje])
 }
 
 model codigo_pago {
@@ -192,6 +198,41 @@ model leadh {
   cliente        cliente  @relation(fields: [cliente_id], references: [cliente_id], onDelete: Cascade, onUpdate: NoAction, map: "leadh_ibfk_1")
 }
 
+model mensaje_out {
+  id_msg               String                 @id
+  phone_to             String
+  template_name        String
+  template_lang        String
+  campanha_id          String?
+  sent_at              DateTime               @default(now()) @db.Timestamp(6)
+  mensaje_status_event mensaje_status_event[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model mensaje_status_event {
+  id                BigInt      @id @default(autoincrement())
+  id_msg            String
+  estado            String
+  ts_unix           BigInt?
+  recipient_id      String?
+  pricing_json      Json?
+  conversation_json Json?
+  errors_json       Json?
+  created_at        DateTime    @default(now()) @db.Timestamp(6)
+  mensaje_out       mensaje_out @relation(fields: [id_msg], references: [id_msg], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([id_msg, estado, ts_unix], map: "ux_mse_id_estado_ts")
+  @@index([estado], map: "idx_mse_estado")
+  @@index([id_msg, created_at(sort: Desc)], map: "idx_mse_idmsg_created")
+}
+
+model notificaciones {
+  id_notificacion Int       @id @default(autoincrement())
+  cliente_id      Int?
+  mensaje         String?
+  fecha           DateTime? @default(now()) @db.Timestamp(6)
+}
+
 model pago {
   pago_id          Int                @id @default(autoincrement())
   cliente_id       Int
@@ -217,6 +258,22 @@ model persona {
   num_leads        Int?               @default(0)
   accion_comercial accion_comercial[]
   usuario          usuario            @relation(fields: [persona_id], references: [usuario_id], onDelete: Cascade, onUpdate: NoAction, map: "persona_fk_usuario")
+}
+
+model plantilla {
+  id              Int        @id @default(autoincrement())
+  nombre          String     @db.VarChar(100)
+  mensaje_cliente String
+  nombre_meta     String?    @db.VarChar(100)
+  meta_id         String?    @db.VarChar(100)
+  estado_meta     String?    @default("PENDING") @db.VarChar(50)
+  categoria       String?    @default("MARKETING") @db.VarChar(50)
+  idioma          String?    @default("es") @db.VarChar(10)
+  header          String?
+  footer          String?
+  created_at      DateTime?  @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?  @db.Timestamp(6)
+  campanha        campanha[]
 }
 
 model rol {
@@ -246,60 +303,9 @@ model usuario {
   rol        rol?     @relation(fields: [rol_id], references: [rol_id], onUpdate: NoAction, map: "usuario_fk_rol")
 }
 
-model notificaciones {
-  id_notificacion Int       @id @default(autoincrement())
-  cliente_id      Int?
-  mensaje         String?
-  fecha           DateTime? @default(now()) @db.Timestamp(6)
-}
-
 model webhook_logs {
   id         Int       @id @default(autoincrement())
   event_type String?   @db.VarChar(100)
   payload    Json?
   created_at DateTime? @default(now()) @db.Timestamptz(6)
-}
-
-model mensaje_out {
-  id_msg               String                 @id
-  phone_to             String
-  template_name        String
-  template_lang        String
-  campanha_id          String?
-  sent_at              DateTime               @default(now()) @db.Timestamp(6)
-  mensaje_status_event mensaje_status_event[]
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model mensaje_status_event {
-  id                BigInt      @id @default(autoincrement())
-  id_msg            String
-  estado            String
-  ts_unix           BigInt?
-  recipient_id      String?
-  pricing_json      Json?
-  conversation_json Json?
-  errors_json       Json?
-  created_at        DateTime    @default(now()) @db.Timestamp(6)
-  mensaje_out       mensaje_out @relation(fields: [id_msg], references: [id_msg], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([id_msg, estado, ts_unix], map: "ux_mse_id_estado_ts")
-  @@index([estado], map: "idx_mse_estado")
-  @@index([id_msg, created_at(sort: Desc)], map: "idx_mse_idmsg_created")
-}
-
-model plantilla {
-  id              Int        @id @default(autoincrement())
-  nombre          String     @db.VarChar(100)
-  mensaje_cliente String
-  nombre_meta     String?    @db.VarChar(100)
-  meta_id         String?    @db.VarChar(100)
-  estado_meta     String?    @default("PENDING") @db.VarChar(50)
-  categoria       String?    @default("MARKETING") @db.VarChar(50)
-  idioma          String?    @default("es") @db.VarChar(10)
-  header          String?
-  footer          String?
-  created_at      DateTime?  @default(now()) @db.Timestamp(6)
-  updated_at      DateTime?  @db.Timestamp(6)
-  campanha        campanha[]
 }
