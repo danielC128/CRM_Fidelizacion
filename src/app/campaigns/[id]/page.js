@@ -735,54 +735,6 @@ const CampaignDetailPage = () => {
 
               {snackbar}
 
-              {/* OVERLAY DE CARGA CON MEJOR DISEÑO */}
-              {loadingUpload && (
-                <Fade in>
-                  <Box sx={{
-                    position: "fixed", 
-                    top: 0, 
-                    left: 0, 
-                    width: "100%", 
-                    height: "100%",
-                    background: 'linear-gradient(135deg, rgba(0, 115, 145, 0.8) 0%, rgba(0, 92, 107, 0.9) 100%)',
-                    backdropFilter: 'blur(10px)',
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center", 
-                    alignItems: "center", 
-                    zIndex: 9999,
-                  }}>
-                    <CircularProgress 
-                      size={80} 
-                      sx={{ 
-                        color: 'white',
-                        mb: 3
-                      }} 
-                    />
-                    <Typography 
-                      variant="h5" 
-                      sx={{ 
-                        color: 'white',
-                        fontWeight: 600,
-                        textAlign: 'center',
-                        textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}
-                    >
-                      Procesando clientes...
-                    </Typography>
-                    <Typography 
-                      variant="body1" 
-                      sx={{ 
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        mt: 1,
-                        textAlign: 'center'
-                      }}
-                    >
-                      Por favor espere mientras se cargan los datos
-                    </Typography>
-                  </Box>
-                </Fade>
-              )}
             </>
           )}
           
